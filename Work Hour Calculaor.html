@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PunchOut Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0a0f; --surface:#111118; --card:#16161f;
+  --border:#2a2a3a; --accent:#e8ff47; --accent2:#47d4ff;
+  --accent3:#ff6b47; --text:#f0f0f8; --muted:#6b6b8a;
+  --success:#47ffb8; --warn:#ffb347;
+  --mono:'Space Mono',monospace;
+  --sans:'Syne',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--sans);min-height:100vh;
+  overflow-x:hidden;position:relative;
+}
+
+/* Grid bg */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(232,255,71,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(232,255,71,.025) 1px,transparent 1px);
+  background-size:56px 56px;
+  animation:gridMove 22s linear infinite;
+  pointer-events:none;z-index:0;
+}
+@keyframes gridMove{100%{transform:translate(56px,56px);}}
+
+/* Orbs */
+.orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:.11;pointer-events:none;z-index:0;}
+.o1{width:420px;height:420px;background:var(--accent);top:-110px;right:-110px;animation:orb1 9s ease-in-out infinite;}
+.o2{width:320px;height:320px;background:var(--accent2);bottom:-60px;left:-70px;animation:orb2 11s ease-in-out infinite;}
+.o3{width:200px;height:200px;background:var(--accent3);top:45%;left:38%;animation:orb1 13s ease-in-out infinite reverse;}
+@keyframes orb1{0%,100%{transform:translate(0,0);}50%{transform:translate(22px,-22px);}}
+@keyframes orb2{0%,100%{transform:translate(0,0);}50%{transform:translate(-15px,18px);}}
+
+/* Layout */
+.wrap{position:relative;z-index:1;max-width:740px;margin:0 auto;padding:44px 22px 60px;}
+
+/* Header */
+.hdr{margin-bottom:36px;animation:up .6s ease both;}
+.badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(232,255,71,.08);border:1px solid rgba(232,255,71,.2);
+  border-radius:999px;padding:5px 15px;
+  font-family:var(--mono);font-size:10px;color:var(--accent);
+  letter-spacing:.13em;text-transform:uppercase;margin-bottom:16px;
+}
+.badge::before{content:'';width:6px;height:6px;background:var(--accent);border-radius:50%;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+h1{font-size:clamp(2rem,6vw,3.6rem);font-weight:800;line-height:1;letter-spacing:-.03em;}
+h1 em{color:var(--accent);font-style:normal;}
+.sub{margin-top:9px;color:var(--muted);font-family:var(--mono);font-size:.88rem;}
+
+/* Card */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:22px;padding:32px;
+  animation:up .6s ease .1s both;
+  position:relative;overflow:hidden;margin-bottom:0;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+}
+
+.slabel{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;gap:10px;margin-bottom:12px;
+}
+.slabel::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Hint */
+.hint{
+  background:rgba(71,212,255,.06);border:1px solid rgba(71,212,255,.15);
+  border-radius:10px;padding:11px 14px;
+  font-family:var(--mono);font-size:10px;color:var(--accent2);
+  margin-bottom:11px;line-height:1.8;
+}
+.hint strong{color:var(--accent);}
+.hint code{background:rgba(255,255,255,.06);padding:1px 4px;border-radius:3px;}
+
+/* Textarea */
+.ta-wrap{position:relative;margin-bottom:24px;}
+textarea{
+  width:100%;background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:13px;padding:15px;color:var(--text);
+  font-family:var(--mono);font-size:11.5px;line-height:1.9;
+  resize:vertical;min-height:180px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+textarea::placeholder{color:var(--muted);}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,255,71,.06);}
+
+/* Radio */
+.rgroup{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+.rlabel{cursor:pointer;}
+.rlabel input{display:none;}
+.rface{
+  display:flex;flex-direction:column;align-items:center;
+  gap:9px;padding:20px 12px;
+  border-radius:14px;border:2px solid var(--border);
+  background:var(--surface);transition:all .22s;
+  position:relative;overflow:hidden;
+}
+.rface::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 0%,rgba(232,255,71,.07),transparent 70%);
+  opacity:0;transition:opacity .3s;
+}
+.rlabel input:checked+.rface{border-color:var(--accent);background:rgba(232,255,71,.04);}
+.rlabel input:checked+.rface::before{opacity:1;}
+.rlabel:hover .rface{border-color:rgba(232,255,71,.4);transform:translateY(-2px);}
+.rico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(232,255,71,.07);font-size:18px;transition:transform .22s;}
+.rlabel input:checked+.rface .rico{transform:scale(1.1);background:rgba(232,255,71,.14);}
+.rhrs{font-size:1.7rem;font-weight:800;color:var(--text);letter-spacing:-.04em;line-height:1;font-family:var(--mono);}
+.rlabel input:checked+.rface .rhrs{color:var(--accent);}
+.rsub{font-size:9.5px;color:var(--muted);font-family:var(--mono);text-align:center;}
+.rdot{position:absolute;top:9px;right:9px;width:15px;height:15px;border-radius:50%;border:2px solid var(--border);transition:all .2s;}
+.rlabel input:checked+.rface .rdot{border-color:var(--accent);background:var(--accent);}
+.rdot::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:5px;height:5px;border-radius:50%;background:var(--bg);opacity:0;transition:opacity .2s;}
+.rlabel input:checked+.rface .rdot::after{opacity:1;}
+
+/* Error */
+.err{background:rgba(255,107,71,.08);border:1px solid rgba(255,107,71,.25);border-radius:10px;padding:12px 15px;font-family:var(--mono);font-size:11px;color:var(--accent3);display:none;margin-bottom:13px;}
+
+/* Button */
+.btn{
+  width:100%;padding:18px;background:var(--accent);color:#0a0a0f;
+  border:none;border-radius:13px;font-family:var(--sans);
+  font-size:1rem;font-weight:800;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:all .22s;position:relative;overflow:hidden;
+}
+.btn::before{content:'';position:absolute;top:50%;left:50%;width:0;height:0;background:rgba(0,0,0,.1);border-radius:50%;transform:translate(-50%,-50%);transition:width .4s,height .4s;}
+.btn:hover::before{width:600px;height:600px;}
+.btn:hover{background:#f5ff70;transform:translateY(-2px);box-shadow:0 10px 32px rgba(232,255,71,.25);}
+.btn:active{transform:translateY(0);}
+.arr{transition:transform .2s;}
+.btn:hover .arr{transform:translateX(5px);}
+
+.foot{text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:24px;animation:up .6s ease .22s both;}
+
+.creator-line {
+  margin-top: 10px;
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+.creator-name {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  padding: 3px 14px;
+  border-radius: 999px;
+  background: rgba(232,255,71,.08);
+  border: 1px solid rgba(232,255,71,.25);
+  display: inline-block;
+  animation: creatorBlink 1.8s ease-in-out infinite;
+  text-shadow: 0 0 12px rgba(232,255,71,.6);
+  box-shadow: 0 0 12px rgba(232,255,71,.1);
+}
+@keyframes creatorBlink {
+  0%,100% { opacity:1; box-shadow:0 0 12px rgba(232,255,71,.15); text-shadow:0 0 12px rgba(232,255,71,.6); }
+  50%      { opacity:.55; box-shadow:0 0 24px rgba(232,255,71,.35); text-shadow:0 0 20px rgba(232,255,71,.9); }
+}
+
+/* ═══════════════════════════════
+   RESULTS PANEL (inline, no popup)
+═══════════════════════════════ */
+.results-panel{
+  margin-top:20px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:22px;overflow:hidden;
+  animation:up .5s ease both;
+  display:none;
+  position:relative;
+}
+.results-panel::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));
+}
+
+.rp-head{
+  padding:22px 26px 0;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.rp-title{font-size:1.15rem;font-weight:800;letter-spacing:-.03em;}
+.rp-title span{color:var(--accent);}
+.rp-date{font-family:var(--mono);font-size:9.5px;color:var(--muted);}
+
+.rp-body{padding:18px 26px 26px;}
+
+/* Info rows */
+.irow{
+  display:flex;align-items:center;gap:11px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:11px;padding:12px 15px;margin-bottom:8px;
+}
+.iico{font-size:19px;flex-shrink:0;}
+.ilbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+.ival{font-family:var(--mono);font-size:1rem;font-weight:700;letter-spacing:-.02em;}
+
+/* ── COUNTDOWN HERO ── */
+.countdown-hero{
+  background:var(--surface);
+  border:1.5px solid rgba(232,255,71,.25);
+  border-radius:16px;padding:22px 20px;
+  text-align:center;margin:14px 0;
+  position:relative;overflow:hidden;
+}
+.countdown-hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(232,255,71,.07),transparent 65%);
+}
+.cd-label{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:rgba(232,255,71,.5);margin-bottom:10px;}
+.cd-time{
+  font-family:var(--mono);font-size:2.8rem;font-weight:700;
+  color:var(--accent);letter-spacing:.04em;line-height:1;
+  text-shadow:0 0 30px rgba(232,255,71,.35);
+  transition:color .3s;
+}
+.cd-time.done{color:var(--success);}
+.cd-time.overdue{color:var(--accent3);}
+.cd-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px;}
+
+/* Punch-out cards */
+.poc-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:14px 0 10px;}
+.poc{border-radius:14px;padding:16px 14px;text-align:center;position:relative;overflow:hidden;animation:pop .38s cubic-bezier(.34,1.56,.64,1) both;}
+.poc.p8  {background:linear-gradient(135deg,rgba(232,255,71,.08),rgba(232,255,71,.02));border:1.5px solid rgba(232,255,71,.25);}
+.poc.p845{background:linear-gradient(135deg,rgba(71,212,255,.08),rgba(71,212,255,.02));border:1.5px solid rgba(71,212,255,.25);animation-delay:.08s;}
+.poc-tag{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;}
+.p8  .poc-tag{color:rgba(232,255,71,.55);}
+.p845 .poc-tag{color:rgba(71,212,255,.55);}
+.poc-time{font-size:1.75rem;font-weight:800;letter-spacing:-.04em;line-height:1;font-family:var(--mono);}
+.p8  .poc-time{color:var(--accent);}
+.p845 .poc-time{color:var(--accent2);}
+.poc-24{font-family:var(--mono);font-size:9px;margin-top:5px;}
+.p8  .poc-24{color:rgba(232,255,71,.38);}
+.p845 .poc-24{color:rgba(71,212,255,.38);}
+
+/* Highlight bar */
+.hbar{
+  border-radius:10px;padding:11px 14px;
+  font-family:var(--mono);font-size:10.5px;
+  display:flex;align-items:center;gap:9px;margin-bottom:10px;
+}
+.hy{background:rgba(232,255,71,.05);border:1px solid rgba(232,255,71,.18);color:var(--accent);}
+.hg{background:rgba(71,255,184,.05);border:1px solid rgba(71,255,184,.18);color:var(--success);}
+.ho{background:rgba(255,107,71,.06);border:1px solid rgba(255,107,71,.18);color:var(--accent3);}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:13px;text-align:center;}
+.stat-lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.stat-val{font-family:var(--mono);font-size:1.15rem;font-weight:700;color:var(--text);}
+.stat-val.green{color:var(--success);}
+.stat-val.yellow{color:var(--accent);}
+.stat-val.orange{color:var(--warn);}
+
+/* Timeline */
+.tlwrap{margin-top:14px;}
+.tllbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:9px;margin-bottom:10px;}
+.tllbl::after{content:'';flex:1;height:1px;background:var(--border);}
+.tli{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(42,42,58,.6);animation:up .28s ease both;}
+.tli:last-child{border-bottom:none;}
+.tdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.tdot.in {background:var(--success);box-shadow:0 0 5px rgba(71,255,184,.45);}
+.tdot.out{background:var(--accent3);box-shadow:0 0 5px rgba(255,107,71,.45);}
+.tt{font-family:var(--mono);font-size:10.5px;font-weight:700;min-width:88px;}
+.tbadge{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:999px;}
+.tbadge.in {background:rgba(71,255,184,.1);color:var(--success);border:1px solid rgba(71,255,184,.2);}
+.tbadge.out{background:rgba(255,107,71,.1);color:var(--accent3);border:1px solid rgba(255,107,71,.2);}
+.tsrc{font-family:var(--mono);font-size:8.5px;color:var(--muted);margin-left:auto;}
+.tbreak{font-family:var(--mono);font-size:9px;color:var(--accent2);background:rgba(71,212,255,.06);border:1px solid rgba(71,212,255,.13);border-radius:7px;padding:4px 10px;margin:2px 0 2px 18px;}
+.ttotal{margin-top:10px;background:rgba(232,255,71,.05);border:1px solid rgba(232,255,71,.16);border-radius:10px;padding:10px 14px;font-family:var(--mono);font-size:10px;color:var(--accent);display:flex;align-items:center;gap:7px;}
+.ttotal strong{font-size:.92rem;}
+
+@keyframes up {from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pop{from{opacity:0;transform:scale(.82);}to{opacity:1;transform:scale(1);}}
+
+@media(max-width:500px){
+  .card,.rp-body,.rp-head{padding:18px;}
+  .poc-grid,.stats-row{grid-template-columns:1fr;}
+  .poc-time{font-size:1.5rem;}
+  .cd-time{font-size:2.1rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="orb o1"></div>
+<div class="orb o2"></div>
+<div class="orb o3"></div>
+
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="badge">⏱ Work Timer - CREATED BY : KRITESH HANSALIYA</div>
+    <h1>Punch<em>Out</em><br>Calculator</h1>
+    <p class="sub">// Paste your biometric log → know exactly when to leave</p>
+  </div>
+
+  <!-- Input Card -->
+  <div class="card">
+    <div class="slabel">01 — Paste your punch log</div>
+    <div class="ta-wrap">
+      <div class="hint">
+        <strong>Paste the full log as-is.</strong> Newest entry is at top, your first Punch-In is at the bottom.<br>
+        Format: <code>* 09:15:39 AM</code> then <code>Punch In</code> or <code>Punch Out</code> on next line.
+      </div>
+      <textarea id="logInput" placeholder="ADD YOUR PUNCH LOGS HERE"></textarea>
+    </div>
+
+    <div class="slabel">02 — Select shift duration</div>
+    <div class="rgroup">
+      <label class="rlabel">
+        <input type="radio" name="shift" value="480" checked>
+        <div class="rface">
+          <div class="rdot"></div>
+          <div class="rico">⚡</div>
+          <div class="rhrs">8 Hrs</div>
+          <div class="rsub">Standard · 480 min</div>
+        </div>
+      </label>
+      <label class="rlabel">
+        <input type="radio" name="shift" value="525">
+        <div class="rface">
+          <div class="rdot"></div>
+          <div class="rico">🔥</div>
+          <div class="rhrs">8:45</div>
+          <div class="rsub">Extended · 525 min</div>
+        </div>
+      </label>
+    </div>
+
+    <div class="err" id="errBox"></div>
+
+    <button class="btn" onclick="calculate()">
+      Calculate Punch-Out &nbsp;<span class="arr">→</span>
+    </button>
+  </div>
+
+  <!-- Results Panel (inline) -->
+  <div class="results-panel" id="resultsPanel">
+
+    <div class="rp-head">
+      <div class="rp-title">Your <span>Results</span></div>
+      <div class="rp-date" id="rpDate"></div>
+    </div>
+
+    <div class="rp-body">
+
+      <!-- First Punch-In -->
+      <div class="irow" style="border-color:rgba(71,255,184,.22);background:rgba(71,255,184,.04);">
+        <div class="iico">🟢</div>
+        <div>
+          <div class="ilbl">First Punch-In · Start of your day</div>
+          <div class="ival" id="rFirstIn" style="color:var(--success);"></div>
+        </div>
+      </div>
+
+      <!-- Last punch -->
+      <div class="irow" id="rLastRow">
+        <div class="iico" id="rLastIco"></div>
+        <div>
+          <div class="ilbl" id="rLastLbl"></div>
+          <div class="ival" id="rLastVal"></div>
+        </div>
+      </div>
+
+      <!-- LIVE COUNTDOWN HERO -->
+      <div class="countdown-hero">
+        <div class="cd-label">⏳ Time remaining to punch out</div>
+        <div class="cd-time" id="cdTime">--:--:--</div>
+        <div class="cd-sub" id="cdSub"></div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-lbl">Net Worked</div>
+          <div class="stat-val" id="sWorked"></div>
+        </div>
+        <div class="stat">
+          <div class="stat-lbl">Remaining</div>
+          <div class="stat-val" id="sRemain"></div>
+        </div>
+      </div>
+
+      <!-- Both punch-out times -->
+      <div class="slabel" style="margin-top:6px;">Punch-out times</div>
+      <div class="poc-grid">
+        <div class="poc p8">
+          <div class="poc-tag">8 Hours</div>
+          <div class="poc-time" id="po8"></div>
+          <div class="poc-24" id="po8b"></div>
+        </div>
+        <div class="poc p845">
+          <div class="poc-tag">8 Hrs 45 Min</div>
+          <div class="poc-time" id="po845"></div>
+          <div class="poc-24" id="po845b"></div>
+        </div>
+      </div>
+
+      <!-- Selected shift bar -->
+      <div class="hbar hy" id="rSelBar">
+        <span>📌</span><div id="rSelTxt"></div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="tlwrap" id="tlWrap" style="display:none;">
+        <div class="tllbl">Full day timeline</div>
+        <div id="tlList"></div>
+        <div class="ttotal" id="tlTotal"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="foot">// 100% offline · no data leaves your browser</p>
+  <p class="foot creator-line">@2026 all rights reserved to <span class="creator-name">KRITESH HANSALIYA</span></p>
+</div>
+
+
+<script>
+let timerInterval = null;
+
+/* ── Parse log ── */
+function parseLog(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const entries = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    // Accept lines starting with optional "* " followed by HH:MM:SS AM/PM
+    const match = lines[i].match(/^\*?\s*(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) continue;
+
+    let h = +match[1], m = +match[2], s = +match[3];
+    const ap = match[4].toUpperCase();
+    if (ap === 'PM' && h < 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+
+    let type = null;
+    for (let j = i + 1; j < lines.length; j++) {
+      if (/punch\s*in/i.test(lines[j]))  { type = 'in';  break; }
+      if (/punch\s*out/i.test(lines[j])) { type = 'out'; break; }
+    }
+    if (type) entries.push({ h, m, s, tot: h * 60 + m, type, src: '' });
+  }
+
+  entries.sort((a, b) => a.tot - b.tot);
+  return entries;
+}
+
+function parseBreaks(text) {
+  return text.split('\n').map(l=>l.trim()).filter(l=>/\d+h\s*\d+m.*break/i.test(l));
+}
+
+/* ── Net worked from in→out pairs ── */
+function calcWorked(entries) {
+  let net = 0;
+  for (let i = 0; i < entries.length - 1; i++) {
+    if (entries[i].type === 'in' && entries[i+1].type === 'out')
+      net += entries[i+1].tot - entries[i].tot;
+  }
+  return net;
+}
+
+/* ── Helpers ── */
+function p(n){ return String(n).padStart(2,'0'); }
+function f12s(h, m) { return `${h%12||12}:${p(m)} ${h<12?'AM':'PM'}`; }
+function f12(h, m, s){ return `${h%12||12}:${p(m)}:${p(s)} ${h<12?'AM':'PM'}`; }
+function f24(h, m)   { return `${p(h)}:${p(m)}`; }
+function toHM(min)   { return `${Math.floor(min/60)}h ${p(min%60)}m`; }
+
+function addSecTotal(h, m, s, extraMin) {
+  let total = h*3600 + m*60 + s + extraMin*60;
+  return { h: Math.floor(total/3600)%24, m: Math.floor((total%3600)/60), s: total%60 };
+}
+
+/* ── Countdown ── */
+function startCountdown(target) {
+  clearInterval(timerInterval);
+  const cdEl  = document.getElementById('cdTime');
+  const cdSub = document.getElementById('cdSub');
+  const sRemain = document.getElementById('sRemain');
+
+  function tick() {
+    const now    = new Date();
+    const tDate  = new Date();
+    tDate.setHours(target.h, target.m, target.s, 0);
+    const diff   = tDate - now;
+
+    if (diff <= 0) {
+      cdEl.textContent = '00:00:00';
+      cdEl.className   = 'cd-time done';
+      cdSub.textContent = '✅ Shift complete! You can leave now.';
+      sRemain.textContent = '0h 00m';
+      sRemain.className = 'stat-val green';
+      clearInterval(timerInterval);
+      return;
+    }
+
+    const rh = Math.floor(diff / 3600000);
+    const rm = Math.floor((diff % 3600000) / 60000);
+    const rs = Math.floor((diff % 60000) / 1000);
+
+    cdEl.textContent  = `${p(rh)}:${p(rm)}:${p(rs)}`;
+    cdEl.className    = 'cd-time';
+    cdSub.textContent = `Leave at ${f12(target.h, target.m, target.s)}`;
+    sRemain.textContent = `${rh}h ${p(rm)}m`;
+    sRemain.className = rh > 0 ? 'stat-val yellow' : 'stat-val orange';
+  }
+
+  tick();
+  timerInterval = setInterval(tick, 1000);
+}
+
+/* ── Main ── */
+function calculate() {
+  clearInterval(timerInterval);
+
+  const raw    = document.getElementById('logInput').value.trim();
+  const errBox = document.getElementById('errBox');
+  errBox.style.display = 'none';
+
+  if (!raw) {
+    errBox.textContent = '⚠  Please paste your punch log first.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  const entries = parseLog(raw);
+  if (!entries.length) {
+    errBox.textContent = '⚠  No punch entries found. Ensure lines like "* 09:15:39 AM" are followed by "Punch In" or "Punch Out".';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  const firstIn = entries.find(e => e.type === 'in');
+  if (!firstIn) {
+    errBox.textContent = '⚠  No "Punch In" found in the log.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  const worked   = calcWorked(entries);
+  const shift    = +document.querySelector('input[name="shift"]:checked').value;
+  const remaining = Math.max(0, shift - worked);
+
+  const hasPunchOut = entries.some(e => e.type === 'out');
+  const last        = entries[entries.length - 1];
+
+  // ── Punch-out time logic (from working code) ──
+  // No breaks → simple: firstIn + shift
+  // Has breaks (currently inside) → now + remaining
+  let punchOutTarget;
+  if (!hasPunchOut) {
+    punchOutTarget = addSecTotal(firstIn.h, firstIn.m, firstIn.s, shift);
+  } else {
+    // If last event is 'in' (still inside after a break), use now + remaining
+    if (last.type === 'in') {
+      const now = new Date();
+      punchOutTarget = addSecTotal(now.getHours(), now.getMinutes(), now.getSeconds(), remaining);
+    } else {
+      // Already punched out — target was firstIn + shift
+      punchOutTarget = addSecTotal(firstIn.h, firstIn.m, firstIn.s, shift);
+    }
+  }
+
+  // Both fixed targets for display (always from firstIn)
+  const out8   = addSecTotal(firstIn.h, firstIn.m, firstIn.s, 480);
+  const out845 = addSecTotal(firstIn.h, firstIn.m, firstIn.s, 525);
+
+  /* ── Fill results panel ── */
+  const panel = document.getElementById('resultsPanel');
+  panel.style.display = 'block';
+  panel.style.animation = 'none';
+  setTimeout(()=>{ panel.style.animation = 'up .5s ease both'; }, 10);
+
+  document.getElementById('rpDate').textContent = new Date().toLocaleDateString('en-IN',
+    { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  // First punch-in
+  document.getElementById('rFirstIn').textContent = f12(firstIn.h, firstIn.m, firstIn.s);
+
+  // Last punch
+  const isIn = last.type === 'in';
+  document.getElementById('rLastIco').textContent = isIn ? '🟢' : '🔴';
+  document.getElementById('rLastLbl').textContent = isIn
+    ? 'Currently inside office (last event = Punch In)'
+    : 'Last Punch-Out of the day';
+  document.getElementById('rLastVal').textContent = f12(last.h, last.m, last.s);
+  document.getElementById('rLastVal').style.color = isIn ? 'var(--success)' : 'var(--accent3)';
+  const lr = document.getElementById('rLastRow');
+  lr.style.borderColor = isIn ? 'rgba(71,255,184,.2)' : 'rgba(255,107,71,.2)';
+  lr.style.background  = isIn ? 'rgba(71,255,184,.04)' : 'rgba(255,107,71,.04)';
+
+  // Stats
+  document.getElementById('sWorked').textContent = toHM(worked);
+  document.getElementById('sWorked').className   = 'stat-val ' + (worked >= shift ? 'green' : 'yellow');
+
+  // Punch-out cards (fixed from firstIn)
+  document.getElementById('po8').textContent    = f12s(out8.h,   out8.m);
+  document.getElementById('po8b').textContent   = f24(out8.h, out8.m) + ' (24h)';
+  document.getElementById('po845').textContent   = f12s(out845.h, out845.m);
+  document.getElementById('po845b').textContent  = f24(out845.h, out845.m) + ' (24h)';
+
+  // Selected shift bar
+  const selOut = shift === 480 ? out8 : out845;
+  document.getElementById('rSelTxt').innerHTML =
+    `Selected <strong>${shift === 480 ? '8 Hrs' : '8 Hrs 45 Min'}</strong> → target punch-out: <strong>${f12s(selOut.h, selOut.m)}</strong>`;
+
+  // Start live countdown
+  startCountdown(punchOutTarget);
+
+  /* ── Timeline ── */
+  const tlWrap = document.getElementById('tlWrap');
+  const tlList = document.getElementById('tlList');
+  tlList.innerHTML = '';
+
+  if (entries.length > 0) {
+    tlWrap.style.display = 'block';
+    const breaks = parseBreaks(raw);
+    let bi = 0;
+
+    entries.forEach((e, idx) => {
+      const div = document.createElement('div');
+      div.className = 'tli';
+      div.style.animationDelay = (idx * .055) + 's';
+      div.innerHTML =
+        `<div class="tdot ${e.type}"></div>` +
+        `<div class="tt">${f12(e.h, e.m, e.s)}</div>` +
+        `<div class="tbadge ${e.type}">${e.type==='in'?'⬆ Punch In':'⬇ Punch Out'}</div>` +
+        `<div class="tsrc">BIOMETRIC</div>`;
+      tlList.appendChild(div);
+
+      if (e.type==='out' && entries[idx+1] && entries[idx+1].type==='in') {
+        const diffMin = entries[idx+1].tot - e.tot;
+        const brDiv = document.createElement('div');
+        brDiv.className = 'tbreak';
+        brDiv.textContent = '⏸  ' + (breaks[bi] || toHM(diffMin) + ' Break');
+        tlList.appendChild(brDiv);
+        bi++;
+      }
+    });
+
+    document.getElementById('tlTotal').innerHTML =
+      `⏱ Total net time worked: <strong>${toHM(worked)}</strong>` +
+      `<span style="margin-left:auto;font-size:8.5px;color:var(--muted);">${entries.length} punch${entries.length>1?'es':''}</span>`;
+  } else {
+    tlWrap.style.display = 'none';
+  }
+
+  // Scroll to results
+  setTimeout(() => {
+    document.getElementById('resultsPanel').scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 100);
+}
+</script>
+</body>
+</html>
